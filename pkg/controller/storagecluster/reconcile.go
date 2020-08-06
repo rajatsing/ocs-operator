@@ -111,7 +111,7 @@ func (r *ReconcileStorageCluster) Reconcile(request reconcile.Request) (reconcil
 		}
 		if !isActive {
 			instance.Status.Phase = statusutil.PhaseIgnored
-			phaseErr := r.client.Status().Update(context.TODO(), instance)
+			phaseErr := r.StatusUpdate(instance)
 			if phaseErr != nil {
 				reqLogger.Error(phaseErr, "Failed to set PhaseIgnored")
 				return reconcile.Result{}, phaseErr
@@ -135,7 +135,7 @@ func (r *ReconcileStorageCluster) Reconcile(request reconcile.Request) (reconcil
 		instance.Status.Phase != statusutil.PhaseDeleting &&
 		instance.Status.Phase != statusutil.PhaseConnecting {
 		instance.Status.Phase = statusutil.PhaseProgressing
-		phaseErr := r.client.Status().Update(context.TODO(), instance)
+		phaseErr := r.StatusUpdate(instance)
 		if phaseErr != nil {
 			reqLogger.Error(phaseErr, "Failed to set PhaseProgressing")
 		}
@@ -146,7 +146,7 @@ func (r *ReconcileStorageCluster) Reconcile(request reconcile.Request) (reconcil
 		reason := ocsv1.ReconcileInit
 		message := "Initializing StorageCluster"
 		statusutil.SetProgressingCondition(&instance.Status.Conditions, reason, message)
-		err = r.client.Status().Update(context.TODO(), instance)
+		err = r.StatusUpdate(instance)
 		if err != nil {
 			reqLogger.Error(err, "Failed to add conditions to status")
 			return reconcile.Result{}, err
@@ -158,7 +158,7 @@ func (r *ReconcileStorageCluster) Reconcile(request reconcile.Request) (reconcil
 		if !contains(instance.GetFinalizers(), storageClusterFinalizer) {
 			reqLogger.Info("Finalizer not found for storagecluster. Adding finalizer")
 			instance.ObjectMeta.Finalizers = append(instance.ObjectMeta.Finalizers, storageClusterFinalizer)
-			if err := r.client.Update(context.TODO(), instance); err != nil {
+			if err := r.StatusUpdate(instance); err != nil {
 				reqLogger.Error(err, "Failed to update storagecluster with finalizer")
 				return reconcile.Result{}, err
 			}
@@ -166,7 +166,7 @@ func (r *ReconcileStorageCluster) Reconcile(request reconcile.Request) (reconcil
 	} else {
 		// The object is marked for deletion
 		instance.Status.Phase = statusutil.PhaseDeleting
-		phaseErr := r.client.Status().Update(context.TODO(), instance)
+		phaseErr := r.StatusUpdate(instance)
 		if phaseErr != nil {
 			reqLogger.Error(phaseErr, "Failed to set PhaseDeleting")
 		}
@@ -179,7 +179,7 @@ func (r *ReconcileStorageCluster) Reconcile(request reconcile.Request) (reconcil
 			reqLogger.Info("Removing finalizer")
 			// Once all finalizers have been removed, the object will be deleted
 			instance.ObjectMeta.Finalizers = remove(instance.ObjectMeta.Finalizers, storageClusterFinalizer)
-			if err := r.client.Update(context.TODO(), instance); err != nil {
+			if err := r.StatusUpdate(instance); err != nil {
 				reqLogger.Error(err, "Failed to remove finalizer from storagecluster")
 				return reconcile.Result{}, err
 			}
@@ -232,7 +232,7 @@ func (r *ReconcileStorageCluster) Reconcile(request reconcile.Request) (reconcil
 		err = f(instance, reqLogger)
 		if r.phase == statusutil.PhaseClusterExpanding {
 			instance.Status.Phase = statusutil.PhaseClusterExpanding
-			phaseErr := r.client.Status().Update(context.TODO(), instance)
+			phaseErr := r.StatusUpdate(instance)
 			if phaseErr != nil {
 				reqLogger.Error(phaseErr, "Failed to set PhaseClusterExpanding")
 			}
@@ -240,7 +240,7 @@ func (r *ReconcileStorageCluster) Reconcile(request reconcile.Request) (reconcil
 			if instance.Status.Phase != statusutil.PhaseReady &&
 				instance.Status.Phase != statusutil.PhaseConnecting {
 				instance.Status.Phase = statusutil.PhaseProgressing
-				phaseErr := r.client.Status().Update(context.TODO(), instance)
+				phaseErr := r.StatusUpdate(instance)
 				if phaseErr != nil {
 					reqLogger.Error(phaseErr, "Failed to set PhaseProgressing")
 				}
@@ -252,7 +252,7 @@ func (r *ReconcileStorageCluster) Reconcile(request reconcile.Request) (reconcil
 			statusutil.SetErrorCondition(&instance.Status.Conditions, reason, message)
 			instance.Status.Phase = statusutil.PhaseError
 			// don't want to overwrite the actual reconcile failure
-			uErr := r.client.Status().Update(context.TODO(), instance)
+			uErr := r.StatusUpdate(instance)
 			if uErr != nil {
 				reqLogger.Error(uErr, "Failed to update status")
 			}
@@ -319,7 +319,7 @@ func (r *ReconcileStorageCluster) Reconcile(request reconcile.Request) (reconcil
 			}
 		}
 	}
-	phaseErr := r.client.Status().Update(context.TODO(), instance)
+	phaseErr := r.StatusUpdate(instance)
 	if phaseErr != nil {
 		reqLogger.Error(phaseErr, "Failed to update status")
 		return reconcile.Result{}, phaseErr
@@ -417,7 +417,7 @@ func (r *ReconcileStorageCluster) ensureCephConfig(sc *ocsv1.StorageCluster, req
 	val, ok := found.Data["config"]
 	if ok != true || val != rookConfigData || ownerRefFound != true {
 		reqLogger.Info("Updating Ceph ConfigMap")
-		return r.client.Update(context.TODO(), cm)
+		return r.StatusUpdate(cm)
 	}
 	return nil
 }
@@ -492,7 +492,7 @@ func (r *ReconcileStorageCluster) setRookCleanupPolicy(instance *ocsv1.StorageCl
 				}
 			} else {
 				cephCluster.Spec.CleanupPolicy.Confirmation = cephv1.DeleteDataDirOnHostsConfirmation
-				err := r.client.Update(context.TODO(), cephCluster)
+				err := r.StatusUpdate(cephCluster)
 				if err != nil {
 					return fmt.Errorf("Unable to update cephCluster: %v", err)
 				}
