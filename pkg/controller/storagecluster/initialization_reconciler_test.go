@@ -1,9 +1,10 @@
 package storagecluster
 
 import (
+	"testing"
+
 	nbv1 "github.com/noobaa/noobaa-operator/v2/pkg/apis/noobaa/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
-	"testing"
 
 	openshiftv1 "github.com/openshift/api/template/v1"
 	api "github.com/openshift/ocs-operator/pkg/apis/ocs/v1"
